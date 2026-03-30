@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{TITLE}}</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" class="logo">Spektrum's Wavelength</a>
+      {{SEARCH}}
+    </nav>
+  </header>
+  <div class="page-wrap">
+    {{TOC}}
+    <main>
+      {{CONTENT}}
+    </main>
+  </div>
+  <footer>
+    <p>&copy; Siddharth Mohanty 2026</p>
+  </footer>
+  <script>hljs.highlightAll();</script>
+  <script>
+  (function() {
+    var toc = document.getElementById('toc');
+    if (!toc) return;
+    var links = toc.querySelectorAll('a');
+    var headings = [];
+    links.forEach(function(a) {
+      var id = a.getAttribute('href').slice(1);
+      var el = document.getElementById(id);
+      if (el) headings.push({ el: el, link: a });
+    });
+    if (!headings.length) return;
+    function update() {
+      var scrollY = window.scrollY + 100;
+      var current = headings[0];
+      for (var i = 0; i < headings.length; i++) {
+        if (headings[i].el.offsetTop <= scrollY) current = headings[i];
+      }
+      links.forEach(function(a) { a.classList.remove('active'); });
+      current.link.classList.add('active');
+    }
+    window.addEventListener('scroll', update, { passive: true });
+    update();
+  })();
+  </script>
+</body>
+</html>
