@@ -480,7 +480,8 @@ of "side-effects", if premise is met.
 ### Return Types
 
 - For functions that return a value, it's useful to wrap in a ``pq::expected``
-    - This is basically ``std::expected`` standardizes the error type to string and implements SOO.
+    - This is basically ``std::expected`` with the error type standardized to
+    string and implementing small object optimization.
 
 #### Exceptions
 
@@ -495,9 +496,9 @@ This is the order of preference for parameter types
         - NOTE: the 8 byte rule is typical on 64-bit architecture, but the 16 byte rule is specific to us since compilers will try and use the SIMD registers to "smuggle" in parameters instead of normal register.
 - Reference
     - This is for when the side effect of the function is mutating the "out parameter".
-    - Your function should typically chose between out paramaters and returns, not both.
+    - Your function should typically choose between out paramaters and returns, not both.
 - RValue
-    - This for when the parameter belongs to a move only type and the function assumes ownership of the object.
+    - This is for when the parameter belongs to a move only type and the function assumes ownership of the object.
 - Value
     - This is typically never useful, except for the exception to const references mentioned above.
 - Pointers
@@ -507,7 +508,7 @@ This is the order of preference for parameter types
 ### Lambda Usage
 
 - Lambdas are almost always preferable to functions since they explicitly mark any global capture, but not an explicit requirement.
-- When using lambas as functions,
+- When using lambdas as functions,
     - adhere to function naming conventions,
     - mark the lambda constexpr,
     - and explicitly define the return type
