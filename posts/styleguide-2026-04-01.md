@@ -31,11 +31,10 @@ of time.
 
 ### Enforcement
 
-We recommend the following hierarchy for rules enforcement in review, 1. CI ; 2. reviewer; 3. lint tooling.
-With higher number representing higher precedence.
+We recommend the following hierarchy for rules enforcement in review; 1. CI ; 2. reviewer; 3. lint tooling.
+With higher numbers representing higher precedence.
 
-> [!TIP] It is worth noting that if reviewers vehemently disagree with a lint output,
-> they should open an issue for the tool and the styleguide.
+> [!TIP] It is worth noting that if reviewers vehemently disagree with a lint output, they should open an issue for the tool and the styleguide.
 
 ## Language Version & Compiler Targets
 
@@ -47,7 +46,7 @@ Therefore, the following ``static_assert`` must be added to every translation un
 
 ```cpp
 #if !defined(__clang__) || __cplusplus < 202302L
-static_assert(false, "Build Error: Strict requirement for Clang-21+ and C++23")
+static_assert(false, "Build Error: Strict requirement for Clang-21+ and C++23");
 #endif
 ```
 
@@ -72,16 +71,17 @@ CXXFLAGS = -std=c++23 -O0 -ggdb -Wall -Wextra -Wpedantic -Wshadow -DDEBUG -fsani
 
 - `-Ofast`, this loops in `-ffast-math`.
 - `-ffast-math`.
-    - NOTE: this is acceptable via ``#pragma push/pop`` in non-critical blocks.
+    - NOTE: this is acceptable via ``#pragma push/pop`` in non correctness-critical blocks.
+
 This list is eligible for expansion over time.
 
 ### Linking and Linker Flags
 
 Linker flags are again handled by tooling but the underlying goal is to maximize link-time optimization while
-minimizing binary size (the goals are often complementary), as such the following is prescribed:
+minimizing binary size (the goals are often complementary); as such the following is prescribed:
 
 - `-fuse-ld=mold`
-    - Mandated for link speed and avoid link-time sequential execution.
+    - Mandated for link speed and avoiding link-time sequential execution.
 - `-flto=full`:
     - To allow for optimization, the linker needs full context of the program, as such full link-time-optimization creates a single massive object and runs multiple compilation passes.
     - Since this makes linking heavily sequential, in `DEBUG` builds, use `-flto=thin`
@@ -136,15 +136,12 @@ LDFLAGS = -fuse-ld=mold -flto=full -Wl,-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,
     │   │       └── legacy_compat.hpp
     │   ├── src/                            <-- src files
     │   │   ├── ProjectA.cpp                <-- Entry point. Must bear the same name as the project.
-    │   │   └── utils.cpp
-    │   │       └── legacy_compat.hpp
-    │   │       └── legacy_compat.hpp
+    │   │   ├── utils.cpp
+│   │       └── legacy_compat.hpp
     │   ├── test/                          <-- tests
     │   └── bench/                         <-- benchmark
     └── ProjectB/
 ```
-
-<!--NOTE: this is outdated; fix to show test.lua/benchmark.lua-->
 
 This monorepo structure makes it abundantly clear what the scope of a project is and
 allows instantiation of one project for distribution, testing, compilation, etc.
@@ -159,8 +156,8 @@ allows instantiation of one project for distribution, testing, compilation, etc.
 
 - Header files should be self-contained (compile on their own) and end in .hpp.
 - Non-header files that are meant for inclusion should end in .inc and be used sparingly.
-    - The use of `.inc` is reserved for xxd or other codegen tooling. Such includes, should have a comment, referring to where they come from.
-- All header files should be self-contained, i.e. including header_X with or without some header_Y does not have hidden effect.
+    - The use of `.inc` is reserved for `xxd` or other codegen tooling. Such includes should have a comment referring to where they come from.
+- All header files should be self-contained, i.e. including header_X with or without some header_Y does not have a hidden effect.
 
 ### Templates & Inline Definitions
 
@@ -189,13 +186,16 @@ worrying about the guard.
 
 ### Forward Declarations vs Includes
 
-- Forward Declarations are not allowed, since they let tools like ninja or
-catalyst skip over forced rebuilds because of header changes.
+Forward Declarations are not allowed, since they let tools like ninja or
+catalyst skip over forced rebuilds because of header changes. In certain cases, forward declarations
+also worsen IDE error messages and autocompletion.
 
-We maintain that forward declarations are banned because Catalyst preempts
-header precompilation and our build server aggressively builds. As such, we
-have sufficient build speed to make the slight hit bearable in exchange for
-build determinism.
+We maintain that forward declarations are banned because Catalyst preempts header precompilation and our build server aggressively pre-builds.
+As such, we have sufficient build speed to make the slight hit bearable in exchange for build determinism.
+Furthermore, the remainder of the header policy naturally dictates small "atomic" headers, where the cost of including a
+large struct is marginal.
+
+#### Interface Segregation & Type Erasure
 
 ### Pragma Once Policy
 
@@ -242,10 +242,13 @@ PascalCase vs snake_case should immediately signal high scrutiny towards user
 defined types.
 
 ```cpp
-// GOOD
-class PulseSchedule, struct QubitMap, using ImageBuffer = std::vector<byte>;
 // BAD
-class pulse_schedule, struct QUBIT_MAP
+class pulse_schedule; // class defined in snake_case
+struct QUBIT_MAP; // class defined in SCREAMING_CASE
+// GOOD
+class PulseSchedule;
+struct QubitMap;
+using ImageBuffer = std::vector<byte>;
 ```
 
 Suffix `_t` is disallowed.
@@ -273,6 +276,8 @@ Constants should follow ``SCREAMING_CASE`` for constexpr defined, const defined,
 This makes it immediately obvious that something cannot be changed and that possibly, it doesn't have a strong type to
 refer to. For variables that need to be tuned as a build parameter, namespace with the ``TUNABLE_`` prefix. Catalyst
 will automatically pull these out into the config file.
+
+#### Magic Numbers & Literal Constants
 
 ### Template Parameters
 
@@ -306,14 +311,14 @@ Bad: src/compiler/backend/llvm/utils/strings -> catalyst::compiler::backend::llv
 
 - Never use ``using namespace`` a header file.
     - This forces your namespace choices onto every file that includes that header, creating invisible conflicts.
-- Exception: Inside a .cpp file, after all includes, you may use using namespace but explicit qualification is still preferred.
+- Exception: Inside a source file, after all includes, you may use `using namespace` but explicit qualification is still preferred.
 
 ### Anonymous Namespaces
 
 - Use anonymous namespaces (``namespace { ... }``) to define file-local functions, variables, and types in .cpp files.
 - Prefer anonymous namespaces to static since it enables better LTO.
 - Never put an anonymous namespace inside a header.
-    - This causes every translation unit that includes the header to define it's own copy of the symbols.
+    - This causes every translation unit that includes the header to define its own copy of the symbols.
 
 
 ###  Inline Namespaces
@@ -373,11 +378,11 @@ microbenchmarks. To make this type of benchmark trivial, you can do the followin
 template <int k>
 struct S {
 #ifdef DEBUG
-    static_assert(false, "you should use specialized member order")
+    static_assert(false, "you should use specialized member order");
 #else
     // final chosen layout
 #endif
-}
+};
 
 #ifdef DEBUG
 template<> struct S<0> {
@@ -450,8 +455,7 @@ This yields:
 
 > VTable overhead is widely overstated in modern CPUs.
 > indirect calls are typically cached and predictable.
-> However, inheritance hierarchies must remain shallow and semantically clean. Since "abstraction hell" is harder to
-> reason about than "specialization hell"
+> However, inheritance hierarchies must remain shallow and semantically clean, since "abstraction hell" is harder to reason about than "specialization hell"
 
 #### Multiple Inheritance
 Multiple inheritance is strongly discouraged outside interface-only layering.
@@ -465,6 +469,8 @@ However, it should not lead to performance regression. When PIMPL is used
 - Construction must pre-touch or warm referenced memory when latency-sensitive
 - Dereference chains must be minimized inside tight loops
 - Heap allocation must be justified by benchmark
+
+### Templates & Concepts
 
 ## Functions
 
@@ -483,12 +489,18 @@ of "side-effects", if premise is met.
     - This is basically ``std::expected`` with the error type standardized to
     string and implementing small object optimization.
 
+### Error Handling Policy
+
+### Attribute-Driven Intent
+
 #### Exceptions
 
 - For performance critical code, even with SSO, the indirection overhead is unacceptable. Mark the function
 - ``noexcept`` and throw (triggering ``std::terminate``).
 
 ### Parameter Correctness
+
+### Standard View Types
 
 This is the order of preference for parameter types
 - Const Reference
@@ -559,6 +571,7 @@ RAII properly for those ownership semantics. Mainly we rely on smart pointers, `
 
 We've broken this section out into a [broader concurrency guide](@DIRECTIVE:copy:$(self.hostname.root)/guides/concurrent-code-practice), and the specific [C++ section of that guide](@DIRECTIVE:copy:$(self.hostname.root)/guides/concurrent-code#cpp).
 
+## Coroutines
 
 ## Formatting & Layout
 
@@ -614,6 +627,6 @@ This will generate a markdown file in a docs directory, to be served by ``mkdocs
 | Alias | Actual Namespace | Reason |
 |-------|------------------|--------|
 | ``clk`` | ``std::chrono`` | "clock" |
-| ``rv`` | std::views | originally an alias for ``std::ranges::views`` |
-| ``fs`` | std::filesystem | standard abbreviation |
+| ``rv`` | ``std::views`` | originally an alias for ``std::ranges::views`` |
+| ``fs`` | ``std::filesystem`` | standard abbreviation |
 
