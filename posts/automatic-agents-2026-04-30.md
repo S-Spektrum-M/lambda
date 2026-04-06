@@ -32,5 +32,5 @@ The human engineer simply reviews the benchmarks and diffs for both approaches d
 ### 5. Humans as Editors, Not Writers
 The endgame of agentic coding isn't replacing developers; it's shifting their role. The system elevates the developer from writing boilerplate code to managing intent, reviewing logic, and orchestrating high-level architectural decisions.
 
-![Task Decomposition](/assets/task_decomp.png)
-![Task Lifecycle](/assets/life_cycle.png)
+![Task Decomposition](../assets/task_decomp.png)
+![Task Lifecycle](../assets/life_cycle.png)

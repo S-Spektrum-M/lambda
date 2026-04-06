@@ -96,7 +96,8 @@ def build_post(md_path):
             .replace("{{TITLE}}", title)
             .replace("{{CONTENT}}", html)
             .replace("{{SEARCH}}", "")
-            .replace("{{TOC}}", toc))
+            .replace("{{TOC}}", toc)
+            .replace("{{BASE_URL}}", "../"))
     slug = re.sub(r"-?\d{4}-\d{2}-\d{2}", "", os.path.splitext(os.path.basename(md_path))[0]).strip("-")
     date = extract_date(os.path.basename(md_path))
     print(f"{slug}, {title}, {date}, page omitted for brevity")
@@ -114,7 +115,7 @@ def build_index(posts):
         date_html = f'<span class="post-meta">{date}</span>' if date else ""
         title_html = render_inline(title)
         items.append(
-            f'<li data-title="{title.lower()}"><a href="/{slug}/">{title_html}{date_html}</a></li>')
+            f'<li data-title="{title.lower()}"><a href="{slug}/">{title_html}{date_html}</a></li>')
     items_html = "\n".join(items)
 
     search_html = """<div class="search-wrap">
@@ -146,7 +147,7 @@ document.getElementById('search').addEventListener('input', function() {{
   document.getElementById('no-results').style.display = visible === 0 ? 'block' : 'none';
 }});
 </script>"""
-    return TEMPLATE.replace("{{TITLE}}", "Spektrum's Wavelength").replace("{{CONTENT}}", content).replace("{{SEARCH}}", search_html).replace("{{TOC}}", "")
+    return TEMPLATE.replace("{{TITLE}}", "Spektrum's Wavelength").replace("{{CONTENT}}", content).replace("{{SEARCH}}", search_html).replace("{{TOC}}", "").replace("{{BASE_URL}}", "./")
 
 
 def main():
