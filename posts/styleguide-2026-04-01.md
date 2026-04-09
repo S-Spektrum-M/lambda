@@ -197,6 +197,11 @@ large struct is marginal.
 
 #### Interface Segregation & Type Erasure
 
+When circular dependencies arise that cannot be resolved by header decomposition,
+use type erasure (e.g., `std::any`, `std::function`) or abstract interfaces to break the cycle.
+Banning forward declarations forces a cleaner dependency graph;
+if you find yourself needing one, your components are likely too tightly coupled.
+
 ### Pragma Once Policy
 
 Header guards are disallowed. Use ``#pragma once`` to avoid the off chance of header guard collision.
@@ -278,6 +283,22 @@ refer to. For variables that need to be tuned as a build parameter, namespace wi
 will automatically pull these out into the config file.
 
 #### Magic Numbers & Literal Constants
+
+For all arbitrarily defined magic numbers and literal constants, one should use constexpr as such:
+
+```cpp
+constexpr float RESIZE_FACTOR = 2.0f;
+```
+
+For magic numbers that arrive from a formula, one should seek to document it at compile time via the definition, e.g.
+
+```cpp
+constexpr double cexprSqrt(double x) {
+    // ... constexpr safe impl.
+}
+
+constexpr double HYPOTENUSE = cexprSqrt(2);
+```
 
 ### Template Parameters
 
@@ -472,6 +493,13 @@ However, it should not lead to performance regression. When PIMPL is used
 
 ### Templates & Concepts
 
+All templates must be constrained using C++20 Concepts.
+Prefer standard concepts (e.g., `std::derived_from`, `std::integral`) where applicable.
+Constraints should be applied to the template declaration to provide clear
+error messages and enable better IDE support.
+
+`SFINAE` via ``std::enable_if`` is banned.
+
 ## Functions
 
 - We model functions as a premise, things that should be true at the call site, and a promise, things that will be true
@@ -491,7 +519,16 @@ of "side-effects", if premise is met.
 
 ### Error Handling Policy
 
+Differentiate between 'Contract Violations' and 'Expected Failures'.
+- Contract Violations: Bugs that should never happen in a correct program. Use `std::terminate` or `pq_assert`.
+- Expected Failures: Anticipated runtime issues (I/O, network). Use `pq::expected<T>` to force the caller to handle the error.
+
 ### Attribute-Driven Intent
+
+Use standard attributes to communicate intent to the compiler and reviewers:
+- `[[nodiscard]]`: Mandatory for all functions returning `pq::expected`, `std::optional`, or resources.
+- `[[maybe_unused]]`: For parameters that are only used in certain build configurations (e.g., DEBUG).
+- `[[deprecated]]`: Use when phasing out old APIs to provide a clear migration path.
 
 #### Exceptions
 
@@ -501,6 +538,12 @@ of "side-effects", if premise is met.
 ### Parameter Correctness
 
 ### Standard View Types
+
+Prefer non-owning view types for function parameters to maximize flexibility and performance:
+- Use `std::string_view` for read-only string access.
+- Use `std::span<T>` for read-only or mutable contiguous memory access.
+
+Avoid passing `const std::vector<T>&` or `const std::string&` unless ownership or specific container properties are required.
 
 This is the order of preference for parameter types
 - Const Reference
@@ -572,6 +615,10 @@ RAII properly for those ownership semantics. Mainly we rely on smart pointers, `
 We've broken this section out into a [broader concurrency guide](@DIRECTIVE:copy:$(self.hostname.root)/guides/concurrent-code-practice), and the specific [C++ section of that guide](@DIRECTIVE:copy:$(self.hostname.root)/guides/concurrent-code#cpp).
 
 ## Coroutines
+
+Coroutines are allowed for complex asynchronous state machines and generators.
+However, be mindful of the hidden heap allocations for the coroutine frame.
+Use `pq::task<T>` (our optimized coroutine handle) to ensure frame elision (HALO) where possible.
 
 ## Formatting & Layout
 

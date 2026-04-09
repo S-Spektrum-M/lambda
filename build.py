@@ -100,7 +100,6 @@ def build_post(md_path):
             .replace("{{BASE_URL}}", "../"))
     slug = re.sub(r"-?\d{4}-\d{2}-\d{2}", "", os.path.splitext(os.path.basename(md_path))[0]).strip("-")
     date = extract_date(os.path.basename(md_path))
-    print(f"{slug}, {title}, {date}, page omitted for brevity")
     return slug, title, date, page
 
 
