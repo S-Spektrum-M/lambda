@@ -11,7 +11,6 @@
 > [!NOTE]
 > It was a deliberate choice to repeat the word trivial that many times. To pull
 > from the broader engineering style guide, "\[building\] is cheap, \[good\] ideas aren't."
->
 > We don't want someone else's code to get in the way of your ideation, nor the opposite.
 
 ### Scope & Applicability
@@ -22,7 +21,7 @@ new style guide.
 - PRs that exist explicitly to update to new style guides are likely a waste
 of time.
 
-### Relationship to clang-21 & C++23
+### Relationship to Clang-21 & C++23
 
 - Currently we target C++23 features as implemented by clang-21.
     - This __should__ be installed on your development machine.
@@ -31,10 +30,10 @@ of time.
 
 ### Enforcement
 
-We recommend the following hierarchy for rules enforcement in review; 1. CI ; 2. reviewer; 3. lint tooling.
+We recommend the following hierarchy for rules enforcement in review; 1. CI ; 2. reviewer; 3. Lint tooling.
 With higher numbers representing higher precedence.
 
-> [!TIP] It is worth noting that if reviewers vehemently disagree with a lint output, they should open an issue for the tool and the styleguide.
+> [!TIP] It is worth noting that if reviewers vehemently disagree with a lint output, they should open an issue for the tool and the style guide.
 
 ## Language Version & Compiler Targets
 
@@ -45,8 +44,12 @@ As mentioned earlier, we target C++23 as it is implemented by clang-21.
 Therefore, the following ``static_assert`` must be added to every translation unit.
 
 ```cpp
-#if !defined(__clang__) || __cplusplus < 202302L
-static_assert(false, "Build Error: Strict requirement for Clang-21+ and C++23");
+#if !defined(__clang__)
+#error "Build Error: Clang is required"
+#elif __clang_major__ < 21
+#error "Build Error: Clang 21+ is required"
+#elif __cplusplus < 202302L
+#error "Build Error: C++23 is required (-std=c++23)"
 #endif
 ```
 
@@ -94,14 +97,14 @@ minimizing binary size (the goals are often complementary); as such the followin
     - This folds identical generated binary sequences into a single copy, massively reducing binary bloat without breaking function pointer equality.
 - `-Wl,--as-needed`: Prevents `DT_NEEDED` bloat by only linking shared libraries if we actually use a symbol from them.
 
-#### Other flags
+#### Other Flags
 
 | Flag | Purpose | Approval in DEBUG/RELEASE |
 | ---- | ---- | ---- |
-| `-Wl,--no-undefined` | Forces the linker to report unresolved symbols in shared libraries at link-time rather than deferring to runtime. Catches missing dependencies immediately instead of segfaulting in production. | Both |
-| `-Wl,--hash-style=gnu` | Uses the faster GNU hash table format for dynamic symbol resolution. Massively reduces startup time for dynamically linked executables compared to the default SysV hash. | Both |
-| `-Wl,--build-id=sha1` | Embeds a unique cryptographic identifier in the binary. Absolutely crucial for matching production binaries to external debug symbols or accurately tracking crash minidumps. | Both (use `=fast` in Debug for fast builds) |
-| `-Wl,-z,relro,-z,now` | Hardens the binary by marking the Global Offset Table (GOT) as read-only and resolving all dynamic symbols at startup (Full RELRO). Mitigates GOT overwrite exploits. | Release Only |
+| `-Wl,--no-undefined` | Forces the linker to report unresolved symbols in shared libraries at link-time rather than deferring to the runtime. Catches missing dependencies immediately instead of segfaulting in production. | Both |
+| `-Wl,--hash-style=gnu` | Uses the faster GNU hash table format for dynamic symbol resolution. Massively reduces start up time for dynamically linked executables compared to the default SysV hash. | Both |
+| `-Wl,--build-id=sha1` | Embeds a unique cryptographic identifier in the binary. Absolutely crucial for matching production binaries to external debug symbols or accurately tracking crash mini dumps. | Both (use `=fast` in Debug for fast builds) |
+| `-Wl,-z,relro,-z,now` | Hardens the binary by marking the Global Offset Table (GOT) as read-only and resolving all dynamic symbols at startup (Full RELRO (relocation read-only)). Mitigates GOT overwrite exploits. | Release Only |
 | `-Wl,--strip-all` | Strips all symbol and relocation information from the final executable. Used to aggressively minimize binary bloat before deployment. | Release Only |
 
 
@@ -137,7 +140,7 @@ LDFLAGS = -fuse-ld=mold -flto=full -Wl,-O3 -Wl,--gc-sections -Wl,--icf=safe -Wl,
     │   ├── src/                            <-- src files
     │   │   ├── ProjectA.cpp                <-- Entry point. Must bear the same name as the project.
     │   │   ├── utils.cpp
-│   │       └── legacy_compat.hpp
+    │   │   └── legacy_compat.hpp
     │   ├── test/                          <-- tests
     │   └── bench/                         <-- benchmark
     └── ProjectB/
@@ -150,13 +153,14 @@ allows instantiation of one project for distribution, testing, compilation, etc.
 
 ### Header Ownership
 
-- In general, every subcomponent of the project has an associated header file.
+- In general, every sub component of the project has an associated header file.
 
 ### Header Closure
 
-- Header files should be self-contained (compile on their own) and end in .hpp.
-- Non-header files that are meant for inclusion should end in .inc and be used sparingly.
-    - The use of `.inc` is reserved for `xxd` or other codegen tooling. Such includes should have a comment referring to where they come from.
+- Header files should be self-contained (compile on their own) and end in `.hpp`.
+- Non-header files that are meant for inclusion should end in `.inc` and be used sparingly.
+    - The use of `.inc` is reserved for `xxd` or other code generation tooling.
+    - Such includes should have a comment referring to where they come from.
 - All header files should be self-contained, i.e. including header_X with or without some header_Y does not have a hidden effect.
 
 ### Templates & Inline Definitions
@@ -167,11 +171,11 @@ the inline functions and templates must also have definitions in the header, eit
 ### Include Order Rules
 
 The order is as follows:
-1. subsystem header
-2. system headers
-3. STL headers
-4. external library headers
-5. internal headers
+1. Subsystem header
+2. System headers
+3. Standard Library headers
+4. External library headers
+5. Internal headers
 
 > [!ERROR] The include_next directive is banned. It leads to non-deterministic builds across systems and it's typically a sign of improper header naming.
 
@@ -184,13 +188,13 @@ worrying about the guard.
     - Broad header guards, e.g. ``#ifdef _WIN32`` should be reflected in the header name, e.g. ``win32_xyz``.
 
 
-### Forward Declarations vs Includes
+### Forward Declarations Vs. Includes
 
-Forward Declarations are not allowed, since they let tools like ninja or
-catalyst skip over forced rebuilds because of header changes. In certain cases, forward declarations
-also worsen IDE error messages and autocompletion.
+Forward Declarations are not allowed, since they allow tools like ninja or catalyst skip over forced rebuilds because
+of header changes. In certain cases, forward declarations also worsen IDE error messages and autocompletion.
 
-We maintain that forward declarations are banned because Catalyst preempts header precompilation and our build server aggressively pre-builds.
+We maintain that forward declarations are banned because Catalyst preempts header precompilation and our build server
+aggressively prebuilds.
 As such, we have sufficient build speed to make the slight hit bearable in exchange for build determinism.
 Furthermore, the remainder of the header policy naturally dictates small "atomic" headers, where the cost of including a
 large struct is marginal.
@@ -224,10 +228,10 @@ The different cases enables easy "textural" differentiation.
 
 ### Files
 
-File systems have different case sensitivity i.e. mac/windows are insensitive while linux is sensitive. To avoid
+File systems have different case sensitivity i.e. mac/windows are insensitive while Linux is sensitive. To avoid
 compilation bugs between platforms, we use ``snake_case``. File names should also be as concise and precise as possible.
 
-> [!TIP] If a file name is too long, it could possibly be nested deeper as it's likely part of a broader niche within the system.
+> [!TIP] If a filename is too long, it could possibly be nested deeper as it's likely part of a broader niche within the system.
 
 #### Example:
 
@@ -243,8 +247,7 @@ We use ``PascalCase`` for naming of types. This distinguishes "User Types" from
 "Standard Library Types" (which are snake_case) and variables. It signals that
 this identifier creates a new object layout.
 
-PascalCase vs snake_case should immediately signal high scrutiny towards user
-defined types.
+`PascalCase` vs `snake_case` should immediately signal high scrutiny towards user defined types.
 
 ```cpp
 // BAD
@@ -261,30 +264,30 @@ Suffix `_t` is disallowed.
 #### Exceptions
 
 There are a few exceptions to this rule. Often times, we will roll our own types that are meant to be used
-interchangeably with standard library types, e.g. ``std::priority_queue`` vs ``pq::priority_queue``. Here it makes sense
-to name them interchangeably too.
+interchangeably with standard library types, e.g. ``std::priority_queue`` vs ``pq::priority_queue`` or
+`pq::unstable_unordered_map`. Here it makes sense to name them interchangeably too.
 
 ### Functions & Methods
 
 Functions and methods follow ``camelCase``.
 
-Named lambdas in global scope should follow the function naming convention, while named lambdas in inner scopes
-follow variable naming convention.
+Named lambdas in namespace scope should follow the function naming convention,
+while named lambdas in inner scopes follow variable naming convention.
 
 ### Variables
 
 Variables follow ``snake_case`` to distinguish from classes, and functions.
 
-### Constants & constexpr
+### Constants & `constexpr`
 
-Constants should follow ``SCREAMING_CASE`` for constexpr defined, const defined, and macro defined constants.
+Constants should follow ``SCREAMING_CASE`` for `constexpr` defined, const defined, and macro defined constants.
 This makes it immediately obvious that something cannot be changed and that possibly, it doesn't have a strong type to
 refer to. For variables that need to be tuned as a build parameter, namespace with the ``TUNABLE_`` prefix. Catalyst
 will automatically pull these out into the config file.
 
 #### Magic Numbers & Literal Constants
 
-For all arbitrarily defined magic numbers and literal constants, one should use constexpr as such:
+For all arbitrarily defined magic numbers and literal constants, one should use `constexpr` as such:
 
 ```cpp
 constexpr float RESIZE_FACTOR = 2.0f;
@@ -302,9 +305,11 @@ constexpr double HYPOTENUSE = cexprSqrt(2);
 
 ### Template Parameters
 
-Template parameters follow ``PascalCase_T`` to denote that something is a template parameter.
+Template type parameters follow ``PascalCase_T`` to denote that something is a template parameter. For non-type
+parameters, use regular parameter syntax i.e. `snake_case`.
 
-> [!TIP] Most of the time, you should provide a using declaration that binds to the template parameter and use that. This makes code introspection for stuff like template meta programming easier.
+> [!TIP] Most of the time, you should provide a using declaration that binds to the template parameter and use that.
+> This makes code introspection for stuff like template meta programming easier.
 
 ### Namespaces
 
@@ -317,8 +322,8 @@ namespaces.
 
 ### Namespace Usage Rules
 
-- All code must exist within the project's top-level namespace (e.g., catalyst:: or pq::).
-- The global namespace is strictly reserved for main() and system calls that require it (e.g., extern "C").
+- All code must exist within the project's top-level namespace (e.g., `catalyst::` or `pq::`).
+- The global namespace is strictly reserved for main() and system calls that require it (e.g., `extern "C"`).
 
 #### Directory Correspondence
 - Namespaces should roughly correspond to the directory structure, but do not be slavish about it.
@@ -328,7 +333,7 @@ Good: src/compiler/ast -> catalyst::compiler::ast
 Bad: src/compiler/backend/llvm/utils/strings -> catalyst::compiler::backend::llvm::utils::strings (Too deep; flatter is better).
 ```
 
-#### using namespace
+#### `using namespace`
 
 - Never use ``using namespace`` a header file.
     - This forces your namespace choices onto every file that includes that header, creating invisible conflicts.
@@ -352,7 +357,7 @@ Bad: src/compiler/backend/llvm/utils/strings -> catalyst::compiler::backend::llv
 
 We maintain a strictly approved list of namespace aliases (See Section 21) that are safe to use project-wide.
 
-Local Aliases: You may define local aliases inside a .cpp file or inline header function/class definition. Even
+Local Aliases: You may define local aliases inside a `.cpp` file or inline header function/class definition. Even
 in these contexts, you should use the common names defined in the appendix.
 
 ```cpp
@@ -362,11 +367,11 @@ void process() {
     auto view = sv::iota(0, 10);
 }
 
-// BAD
+// BAD (inside of a header file)
 namespace sv = std::views; // Pollutes everyone's build and breaks interpretability
 ```
 
-### ADL
+### Argument Dependent Lookup (ADL)
 
 - ADL allows the compiler to find functions in namespaces based on the arguments passed to them. This breaks determinism.
 - Explicitly qualify function calls unless ADL is strictly required (e.g., for swap or operator overloads).
@@ -377,10 +382,12 @@ namespace sv = std::views; // Pollutes everyone's build and breaks interpretabil
 - Operators (operator<<, operator+) rely on ADL to function. This is acceptable.
 
 ### Symbol Visibility
-Default: We build with "hidden" visibility by default (-fvisibility=hidden).
-Public API: Explicitly mark classes and functions intended for external consumption (outside the shared library/DLL) with the project's export macro (e.g., CATALYST_API).
+Default: We build with "hidden" visibility by default (`-fvisibility=hidden`).
+Public API: Explicitly mark classes and functions intended for external consumption (outside the shared library/DLL)
+with the project's export macro (e.g., CATALYST_API).
 
-Reasoning: This creates a smaller binary size, faster load times, and enforces a strict boundary between "Public API" and "Internal Implementation."
+Reasoning: This creates a smaller binary size, faster load times, and enforces a strict boundary between
+"Public API" and "Internal Implementation."
 
 ## Classes & Structs
 
@@ -393,7 +400,7 @@ Class layout should have the goal of optimizing performance. The primary layout 
 - Poor Cache Locality from padding
 
 Since different structs have different applications, and the goals above conflict, the only possible remedy is
-microbenchmarks. To make this type of benchmark trivial, you can do the following to allow for easier benchmarking:
+micro benchmarks. To make this type of benchmark trivial, you can do the following to allow for easier benchmarking:
 
 ```cpp
 template <int k>
@@ -432,7 +439,7 @@ Object semantics should be strict until otherwise needed. Therefore, the order i
 
 ### Constructors & Explicitness
 
-Constructors are allowed to be implicit when all of the following are true:
+Constructors are allowed to be implicit when all the following are true:
 - The incoming type is semantically equivalent to the constructed type
 - The conversion is obvious at the call site
 - No ownership, allocation, lifetime, or narrowing ambiguity is introduced
@@ -456,10 +463,12 @@ Examples where implicit is forbidden:
 Prefer compile-time polymorphism via enum-dispatch templates over runtime polymorphism.
 
 ```cpp
-enum class Backend { CPU, CUDA, Metal };
+enum class Backend { CPU, CUDA, METAL };
 
-template <Backend B>
-struct Engine;
+template <Backend Backend_T>
+struct Engine {
+    /// definition
+};
 ```
 
 
@@ -470,18 +479,18 @@ This yields:
 - optimizer-friendly code paths
 
 #### Virtual Functions
+
 - runtime polymorphism is required
 - specialization explosion is worse than dispatch cost
 - call frequency is low or amortized
 
-> VTable overhead is widely overstated in modern CPUs.
-> indirect calls are typically cached and predictable.
+> vtable overhead is widely overstated in modern CPUs. Indirect calls are typically cached and predictable.
 > However, inheritance hierarchies must remain shallow and semantically clean, since "abstraction hell" is harder to reason about than "specialization hell"
 
 #### Multiple Inheritance
 Multiple inheritance is strongly discouraged outside interface-only layering.
 
-#### PIMPL Usage
+#### Pointer to Implementation (PIMPL Patter)
 
 PIMPL (pointer to implementation) is allowed for ABI stability across releases, and isolation of heavy dependencies.
 However, it should not lead to performance regression. When PIMPL is used
@@ -504,7 +513,7 @@ error messages and enable better IDE support.
 
 - We model functions as a premise, things that should be true at the call site, and a promise, things that will be true
 of "side-effects", if premise is met.
-    - Side Effects constitute, io, mutating global state, and returning values. The first 2 are discussed in more detail later.
+    - Side Effects constitute, I/O, mutating global state, and returning values. The first 2 are discussed in more detail later.
 
 ### Function Size & Responsibility
 
@@ -532,8 +541,7 @@ Use standard attributes to communicate intent to the compiler and reviewers:
 
 #### Exceptions
 
-- For performance critical code, even with SSO, the indirection overhead is unacceptable. Mark the function
-- ``noexcept`` and throw (triggering ``std::terminate``).
+- For performance critical code, even with SSO, the indirection overhead is unacceptable. Mark the function ``noexcept`` and throw (triggering ``std::terminate``).
 
 ### Parameter Correctness
 
@@ -551,7 +559,7 @@ This is the order of preference for parameter types
         - NOTE: the 8 byte rule is typical on 64-bit architecture, but the 16 byte rule is specific to us since compilers will try and use the SIMD registers to "smuggle" in parameters instead of normal register.
 - Reference
     - This is for when the side effect of the function is mutating the "out parameter".
-    - Your function should typically choose between out paramaters and returns, not both.
+    - Your function should typically choose between out parameters and returns, not both.
 - RValue
     - This is for when the parameter belongs to a move only type and the function assumes ownership of the object.
 - Value
@@ -565,7 +573,7 @@ This is the order of preference for parameter types
 - Lambdas are almost always preferable to functions since they explicitly mark any global capture, but not an explicit requirement.
 - When using lambdas as functions,
     - adhere to function naming conventions,
-    - mark the lambda constexpr,
+    - mark the lambda `constexpr`,
     - and explicitly define the return type
 
 #### Examples
@@ -607,7 +615,7 @@ RAII properly for those ownership semantics. Mainly we rely on smart pointers, `
 - Use ``pq::deferred_allocator`` for cleanup in hot paths.
 - Never use or accept raw pointers, except for C interop.
 
-### Stack vs Heap
+### Stack Vs. Heap
 - Always prefer the stack to the heap as it better optimizes cache locality and cleanup.
 
 ## Concurrency
@@ -665,7 +673,7 @@ the documented structure.
 void *malloc(size_t bytes);
 ```
 
-This will generate a markdown file in a docs directory, to be served by ``mkdocs``.
+This will generate a Markdown file in a docs directory, to be served by ``mkdocs``.
 
 ## Appendix
 
