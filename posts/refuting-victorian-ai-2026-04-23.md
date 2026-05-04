@@ -9,6 +9,7 @@ I think the current panic over AI-driven energy consumption is the same story, a
 ## The Argument
 
 The standard framing goes like this:
+
 - AI training and inference require enormous compute.
 - Compute requires energy.
 - Energy production contributes to climate change.
